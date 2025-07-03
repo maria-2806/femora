@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
-
+import Chat from "./components/Chat";
 import Home from "./components/Home";
 const queryClient = new QueryClient();
 import Layout from "./components/layout";
@@ -26,6 +26,7 @@ const App = () => (
           <Route path="/home" element={<Home />} />
           <Route path="/scan" element={<MRIScan />} />
           <Route path="/tracker" element={<Tracker />} />
+          <Route path="/chat" element={<Chat />} />
 
           </Route>
         </Routes>

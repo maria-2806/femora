@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",                        // ✅ Required for async/await and modern features
+    "module": "commonjs",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "strict": true,
+    "skipLibCheck": true,
+    "types": ["node"],                         // ✅ Required for Node.js globals
+    "moduleResolution": "node",                // ✅ Helps resolve imports like @google/genai
+    "resolveJsonModule": true,                 // ✅ Helpful for configs in .json files
+    "outDir": "./dist"                         // ✅ Keeps compiled code separate from source
+  },
+  "include": ["server/**/*"]                   // ✅ Ensure your server folder is included
+}
