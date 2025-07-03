@@ -1,0 +1,131 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Femora Design System - Feminine Healthcare Theme
+All colors MUST be HSL.
+*/
+
+@layer base {
+  :root {
+    /* Soft feminine background palette */
+    --background: 350 25% 98%;
+    --foreground: 340 15% 15%;
+
+    /* Card styling with soft pink undertones */
+    --card: 350 30% 97%;
+    --card-foreground: 340 20% 20%;
+
+    /* Popover elements */
+    --popover: 350 35% 96%;
+    --popover-foreground: 340 25% 15%;
+
+    /* Primary - Soft Rose Pink */
+    --primary: 330 45% 65%;
+    --primary-foreground: 350 50% 98%;
+    --primary-glow: 330 55% 75%;
+
+    /* Secondary - Lavender Purple */
+    --secondary: 270 35% 85%;
+    --secondary-foreground: 270 40% 25%;
+
+    /* Muted elements */
+    --muted: 340 20% 92%;
+    --muted-foreground: 340 15% 55%;
+
+    /* Accent - Soft Purple */
+    --accent: 280 40% 80%;
+    --accent-foreground: 280 45% 25%;
+
+    /* Health-focused colors */
+    --success: 120 45% 65%;
+    --success-foreground: 120 50% 15%;
+    
+    --warning: 35 85% 70%;
+    --warning-foreground: 35 90% 15%;
+
+    --destructive: 0 70% 65%;
+    --destructive-foreground: 0 80% 95%;
+
+    /* UI Elements */
+    --border: 340 25% 88%;
+    --input: 340 30% 92%;
+    --ring: 330 45% 65%;
+
+    --radius: 1rem;
+
+    /* Gradients for beautiful effects */
+    --gradient-primary: linear-gradient(135deg, hsl(330 45% 65%), hsl(330 55% 75%));
+    --gradient-secondary: linear-gradient(135deg, hsl(270 35% 85%), hsl(280 40% 80%));
+    --gradient-soft: linear-gradient(180deg, hsl(350 25% 98%), hsl(340 20% 95%));
+    --gradient-hero: linear-gradient(135deg, hsl(330 45% 65%), hsl(270 35% 75%));
+
+    /* Shadows with feminine glow */
+    --shadow-soft: 0 4px 20px hsl(330 45% 65% / 0.15);
+    --shadow-glow: 0 8px 32px hsl(330 55% 75% / 0.25);
+    --shadow-elegant: 0 12px 40px hsl(340 20% 50% / 0.12);
+
+    /* Smooth transitions */
+    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  }
+
+  .dark {
+    /* Dark mode with feminine purple undertones */
+    --background: 280 15% 8%;
+    --foreground: 340 25% 92%;
+
+    --card: 280 20% 12%;
+    --card-foreground: 340 20% 88%;
+
+    --popover: 280 25% 10%;
+    --popover-foreground: 340 25% 90%;
+
+    --primary: 330 50% 70%;
+    --primary-foreground: 280 15% 8%;
+    --primary-glow: 330 60% 80%;
+
+    --secondary: 270 30% 20%;
+    --secondary-foreground: 340 25% 85%;
+
+    --muted: 280 15% 18%;
+    --muted-foreground: 340 15% 65%;
+
+    --accent: 280 35% 25%;
+    --accent-foreground: 340 25% 85%;
+
+    --success: 120 40% 60%;
+    --success-foreground: 120 45% 95%;
+    
+    --warning: 35 80% 65%;
+    --warning-foreground: 35 85% 95%;
+
+    --destructive: 0 65% 60%;
+    --destructive-foreground: 0 70% 95%;
+
+    --border: 280 20% 20%;
+    --input: 280 25% 16%;
+    --ring: 330 50% 70%;
+
+    /* Dark mode gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(330 50% 70%), hsl(330 60% 80%));
+    --gradient-secondary: linear-gradient(135deg, hsl(270 30% 20%), hsl(280 35% 25%));
+    --gradient-soft: linear-gradient(180deg, hsl(280 15% 8%), hsl(280 20% 12%));
+    --gradient-hero: linear-gradient(135deg, hsl(330 50% 70%), hsl(270 30% 60%));
+
+    /* Dark mode shadows */
+    --shadow-soft: 0 4px 20px hsl(330 50% 30% / 0.4);
+    --shadow-glow: 0 8px 32px hsl(330 60% 40% / 0.5);
+    --shadow-elegant: 0 12px 40px hsl(280 20% 5% / 0.6);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
