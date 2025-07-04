@@ -11,5 +11,5 @@
     "resolveJsonModule": true,                 // ✅ Helpful for configs in .json files
     "outDir": "./dist"                         // ✅ Keeps compiled code separate from source
   },
-  "include": ["server/**/*"]                   // ✅ Ensure your server folder is included
+  "include": ["server//*"]                   // ✅ Ensure your server folder is included
 }

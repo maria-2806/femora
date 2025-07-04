@@ -1,6 +1,12 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Send, Bot, User } from 'lucide-react';
 
@@ -23,6 +29,11 @@ const Chat = () => {
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   const sendMessage = async () => {
     if (!inputValue.trim()) return;
@@ -39,7 +50,7 @@ const Chat = () => {
     setIsTyping(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/gemini', {
+      const response = await fetch('http://localhost:5000/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt: inputValue }),
@@ -50,7 +61,7 @@ const Chat = () => {
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
         type: 'bot',
-        content: data.text || 'Sorry, I couldn’t understand that.',
+        content: data.response || 'Sorry, I couldn’t understand that.',
         timestamp: new Date(),
       };
 
@@ -134,7 +145,10 @@ const Chat = () => {
                     >
                       <p className="text-sm leading-relaxed">{message.content}</p>
                       <span className="text-xs opacity-70 mt-2 block">
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        {message.timestamp.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
                       </span>
                     </div>
                   </div>
@@ -164,6 +178,7 @@ const Chat = () => {
                   </div>
                 </div>
               )}
+              <div ref={bottomRef} />
             </CardContent>
 
             {/* Quick Questions */}
@@ -193,7 +208,12 @@ const Chat = () => {
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
                   className="flex-1"
                 />
-                <Button onClick={sendMessage} variant="feminine" className="px-6">
+                <Button
+                  onClick={sendMessage}
+                  variant="feminine"
+                  className="px-6"
+                  disabled={isTyping}
+                >
                   <Send className="w-4 h-4" />
                 </Button>
               </div>

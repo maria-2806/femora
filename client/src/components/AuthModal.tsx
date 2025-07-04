@@ -1,6 +1,11 @@
 import { useState } from 'react';
 import { auth, googleProvider } from '@/firebaseConfig';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInWithPopup,
+  updateProfile 
+} from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
@@ -30,28 +35,36 @@ const AuthModal = ({ children }: { children: React.ReactNode }) => {
   };
 
   const handleSubmit = async (type: 'login' | 'signup') => {
-    setIsLoading(true);
-    try {
-      if (type === 'login') {
-        await signInWithEmailAndPassword(auth, formData.email, formData.password);
-        toast({ title: "Welcome back!", description: "You've successfully signed in." });
-        navigate('/home');
-      } else {
-        if (formData.password !== formData.confirmPassword) {
-          toast({ title: "Passwords don't match", description: "Please confirm your password." });
-          setIsLoading(false);
-          return;
-        }
-        await createUserWithEmailAndPassword(auth, formData.email, formData.password);
-        toast({ title: "Account created!", description: "Welcome to Femora!" });
-        navigate('/home');
+  setIsLoading(true);
+  try {
+    if (type === 'login') {
+      await signInWithEmailAndPassword(auth, formData.email, formData.password);
+      toast({ title: "Welcome back!", description: "You've successfully signed in." });
+      navigate('/home');
+    } else {
+      if (formData.password !== formData.confirmPassword) {
+        toast({ title: "Passwords don't match", description: "Please confirm your password." });
+        setIsLoading(false);
+        return;
       }
-    } catch (error: any) {
-      toast({ title: "Auth error", description: error.message });
-    } finally {
-      setIsLoading(false);
+
+      const userCredential = await createUserWithEmailAndPassword(auth, formData.email, formData.password);
+
+      // ✅ Set displayName from first + last name
+      await updateProfile(userCredential.user, {
+        displayName: `${formData.firstName} ${formData.lastName}`
+      });
+
+      toast({ title: "Account created!", description: "Welcome to Femora!" });
+      navigate('/home');
     }
-  };
+  } catch (error: any) {
+    toast({ title: "Auth error", description: error.message });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
   const handleGoogleAuth = async () => {
     try {

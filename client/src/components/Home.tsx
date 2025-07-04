@@ -8,7 +8,7 @@ const Home = () => {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
-        setUserName(user.displayName || user.email); // fallback to email
+        setUserName(user.displayName); // fallback to email
       } else {
         setUserName(null);
       }
@@ -18,7 +18,7 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="p-6 text-xl font-medium text-pink-700">
+    <div className="p-6 mt-11 text-xl font-medium text-pink-700">
       {userName ? `Hello ${userName}` : 'Loading...'}
     </div>
   );
