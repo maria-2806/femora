@@ -13,23 +13,23 @@ import { useRef } from 'react';
 
 
 const MRIScan = () => {
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [isAnalyzing, setIsAnalyzing] = useState(false);
-    const [analysisResult, setAnalysisResult] = useState<{
-        probability: number;
-        confidence: number;
-        findings: string[];
-    } | null>(null);
-    const [dragActive, setDragActive] = useState(false);
-    const { toast } = useToast();
-    
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
-    
-    const triggerFileSelect = () => {
-      if (fileInputRef.current) {
-        fileInputRef.current.click();
-      }
-    };
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState<{
+    probability: number;
+    confidence: number;
+    findings: string[];
+  } | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  const { toast } = useToast();
+
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const triggerFileSelect = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
   // 🚀 Simulate analysis and save to Firebase
   const simulateAnalysis = async (selectedFile?: File) => {
     if (!selectedFile || !auth.currentUser) {
@@ -45,11 +45,11 @@ const MRIScan = () => {
     const fileRef = ref(storage, `scans/${uid}/${fileId}-${selectedFile.name}`);
 
     try {
-      // Upload file to Firebase Storage
+      // Upload to Firebase Storage
       await uploadBytes(fileRef, selectedFile);
       const fileURL = await getDownloadURL(fileRef);
 
-      // Simulate progress bar
+      // Progress bar simulation
       const uploadInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 100) {
@@ -58,45 +58,63 @@ const MRIScan = () => {
           }
           return prev + 10;
         });
-      }, 200);
+      }, 150);
 
-      // Mock result after 3s
-      setTimeout(async () => {
-        const mockResult = {
-          probability: Math.floor(Math.random() * 40) + 60,
-          confidence: Math.floor(Math.random() * 20) + 80,
-          findings: [
-            'Multiple small follicles detected in ovaries',
-            'Ovarian volume appears enlarged',
-            'Hormonal pattern suggests PCOS indicators',
-            'Recommend follow-up with healthcare provider'
+      // 🔥 Real API Call to FastAPI server
+      const formData = new FormData();
+      formData.append("file", selectedFile);
+
+      const res = await fetch("http://localhost:8000/scan", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = await res.json();
+
+      if (result.error) throw new Error(result.error);
+
+      const finalResult = {
+        probability: result.class === "pcos" ? Math.floor(result.confidence) : 100 - Math.floor(result.confidence),
+        confidence: Math.floor(result.confidence),
+        findings: result.class === "pcos"
+          ? [
+            "Multiple small follicles detected in ovaries",
+            "Ovarian volume appears enlarged",
+            "Hormonal pattern suggests PCOS indicators",
+            "Recommend follow-up with healthcare provider"
           ]
-        };
+          : [
+            "Ovaries appear normal in volume and structure",
+            "No signs of excessive follicles or cysts",
+            "Hormonal indicators within normal range",
+            "Low likelihood of PCOS at this time"
+          ]
+      };
 
-        setAnalysisResult(mockResult);
-        setIsAnalyzing(false);
+      setAnalysisResult(finalResult);
+      setIsAnalyzing(false);
 
-        // Save result to Firestore
-        await addDoc(collection(db, 'users', uid, 'diagnosis'), {
-          fileURL,
-          ...mockResult,
-          createdAt: serverTimestamp()
-        });
+      // Save to Firestore
+      await addDoc(collection(db, 'users', uid, 'diagnosis'), {
+        fileURL,
+        ...finalResult,
+        createdAt: serverTimestamp()
+      });
 
-        toast({
-          title: "Analysis Complete!",
-          description: "Your MRI scan has been successfully analyzed and saved.",
-        });
-      }, 3000);
+      toast({
+        title: "Analysis Complete!",
+        description: "Your MRI scan has been successfully analyzed and saved.",
+      });
     } catch (err: any) {
       setIsAnalyzing(false);
       toast({
-        title: "Upload Error",
+        title: "Scan Error",
         description: err.message,
         variant: "destructive",
       });
     }
   };
+
 
   // 🧲 Drag & Drop Support
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -119,13 +137,13 @@ const MRIScan = () => {
     }
   }, []);
 
- const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
-  if (file) {
-    console.log("✅ File selected:", file);
-    simulateAnalysis(file); 
-  }
-};
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      console.log("✅ File selected:", file);
+      simulateAnalysis(file);
+    }
+  };
 
 
   return (
@@ -156,11 +174,10 @@ const MRIScan = () => {
             </CardHeader>
             <CardContent>
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
-                  dragActive 
-                    ? 'border-primary bg-primary/5 scale-105' 
-                    : 'border-border hover:border-primary/50 hover:bg-muted/30'
-                }`}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${dragActive
+                  ? 'border-primary bg-primary/5 scale-105'
+                  : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                  }`}
                 onDragEnter={handleDragIn}
                 onDragLeave={handleDragOut}
                 onDragOver={handleDrag}
@@ -173,20 +190,20 @@ const MRIScan = () => {
                   <p className="text-lg font-medium">Drop your MRI scan here</p>
                   <p className="text-sm text-muted-foreground">or click to browse files</p>
                   <div className="flex justify-center">
-  <input
-  ref={fileInputRef}
-  type="file"
-  accept=".dcm,.jpg,.jpeg,.png"
-  onChange={handleFileSelect}
-  className="hidden"
-/>
-<Button variant="outline" onClick={triggerFileSelect}>
-  <FileImage className="w-4 h-4 mr-2" />
-  Select File
-</Button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".dcm,.jpg,.jpeg,.png"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                    />
+                    <Button variant="outline" onClick={triggerFileSelect}>
+                      <FileImage className="w-4 h-4 mr-2" />
+                      Select File
+                    </Button>
 
-</div>
-</div>
+                  </div>
+                </div>
 
               </div>
 
