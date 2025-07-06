@@ -6,3 +6,5 @@ opencv-python-headless
 tensorflow
 pillow
 torch
+opencv-python
+scikit-image
