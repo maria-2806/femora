@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar, Heart, TrendingUp, Moon, Droplets } from 'lucide-react';
 import { auth, db } from '@/firebaseConfig';
 import { collection, doc, getDocs, setDoc, query, where, Timestamp } from 'firebase/firestore';
-import { deleteDoc } from 'firebase/firestore'; 
+import { deleteDoc } from 'firebase/firestore';
 
 
 
@@ -15,7 +15,7 @@ const Tracker = () => {
   const [ovulationDate, setOvulationDate] = useState<Date | null>(null);
   const [fertileDates, setFertileDates] = useState<string[]>([]);
   const [uid, setUid] = useState<string | null>(null);
-const periodLength = 5;
+  const periodLength = 5;
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
@@ -44,22 +44,35 @@ const periodLength = 5;
     return () => unsubscribe();
   }, []);
 
- useEffect(() => {
+  useEffect(() => {
   if (selectedDates.length < 2) return;
 
-  const sorted = [...selectedDates].sort();
-  const parsedDates = sorted.map(date => new Date(date));
+  // Step 1: Sort dates and convert to Date objects
+  const sortedDates = [...selectedDates].sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+  const parsedDates = sortedDates.map(date => new Date(date));
 
-  const cycleLengths = [];
+  // Step 2: Group dates into periods (gap > 10 days = new period)
+  const periodStarts: Date[] = [parsedDates[0]];
   for (let i = 1; i < parsedDates.length; i++) {
     const diff = (parsedDates[i].getTime() - parsedDates[i - 1].getTime()) / (1000 * 60 * 60 * 24);
+    if (diff > 10) {
+      periodStarts.push(parsedDates[i]);
+    }
+  }
+
+  if (periodStarts.length < 2) return;
+
+  const cycleLengths: number[] = [];
+  for (let i = 1; i < periodStarts.length; i++) {
+    const diff = (periodStarts[i].getTime() - periodStarts[i - 1].getTime()) / (1000 * 60 * 60 * 24);
     cycleLengths.push(diff);
   }
 
   const avgCycle = Math.round(cycleLengths.reduce((a, b) => a + b, 0) / cycleLengths.length);
-  const lastDate = parsedDates[parsedDates.length - 1];
 
-  const nextStart = new Date(lastDate);
+  const lastPeriodStart = periodStarts[periodStarts.length - 1];
+
+  const nextStart = new Date(lastPeriodStart);
   nextStart.setDate(nextStart.getDate() + avgCycle);
   setPredictedDate(nextStart);
 
@@ -68,80 +81,98 @@ const periodLength = 5;
   setOvulationDate(ovulation);
 }, [selectedDates]);
 
+useEffect(() => {
+  if (!ovulationDate) return;
+
+  const fertile: string[] = [];
+  for (let i = 0; i <= 5; i++) {
+    const fertileDay = new Date(ovulationDate);
+    fertileDay.setDate(ovulationDate.getDate() - i);
+    fertile.push(fertileDay.toISOString().split('T')[0]);
+  }
+  setFertileDates(fertile);
+}, [ovulationDate]);
+
 
   const generateCalendarDays = () => {
-  const year = currentMonth.getFullYear();
-  const month = currentMonth.getMonth();
-  const firstDay = new Date(year, month, 1);
-  const lastDay = new Date(year, month + 1, 0);
-  const startDay = firstDay.getDay();
-  const daysInMonth = lastDay.getDate();
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDay = firstDay.getDay();
+    const daysInMonth = lastDay.getDate();
 
-  const days = [];
-  for (let i = 0; i < startDay; i++) days.push(null);
+    const days = [];
+    for (let i = 0; i < startDay; i++) days.push(null);
 
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    const isSelected = selectedDates.includes(dateString);
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const isSelected = selectedDates.includes(dateString);
 
-    let isPredicted = false;
-    let isOvulation = false;
-    let isPredictedRange = false;
+      const thisDate = new Date(dateString);
 
-    const thisDate = new Date(dateString);
-    const predictedMonthMatches = predictedDate && predictedDate.getMonth() === currentMonth.getMonth() &&
-                                  predictedDate.getFullYear() === currentMonth.getFullYear();
+      const isPredictedMonth =
+        predictedDate &&
+        predictedDate.getFullYear() === currentMonth.getFullYear() &&
+        predictedDate.getMonth() === currentMonth.getMonth();
 
-    if (predictedDate && predictedMonthMatches) {
-      const predictedRange = Array.from({ length: periodLength }, (_, i) => {
-        const d = new Date(predictedDate);
-        d.setDate(d.getDate() + i);
-        return d.toDateString();
+      const isOvulationMonth =
+        ovulationDate &&
+        ovulationDate.getFullYear() === currentMonth.getFullYear() &&
+        ovulationDate.getMonth() === currentMonth.getMonth();
+
+      let isPredicted = false;
+      let isPredictedRange = false;
+      let isOvulation = false;
+
+      if (predictedDate && isPredictedMonth) {
+        const predictedRange = Array.from({ length: periodLength }, (_, i) => {
+          const d = new Date(predictedDate);
+          d.setDate(d.getDate() + i);
+          return d.toDateString();
+        });
+
+        isPredicted = predictedDate.toDateString() === thisDate.toDateString();
+        isPredictedRange = predictedRange.includes(thisDate.toDateString());
+      }
+
+      if (ovulationDate && isOvulationMonth) {
+        isOvulation = ovulationDate.toDateString() === thisDate.toDateString();
+      }
+
+      const isFertile = fertileDates.includes(dateString);
+
+      days.push({
+        day,
+        dateString,
+        isSelected,
+        isPredicted,
+        isOvulation,
+        isPredictedRange,
+        isFertile,
       });
-
-      isPredictedRange = predictedRange.includes(thisDate.toDateString());
-      isPredicted = predictedDate.toDateString() === thisDate.toDateString();
     }
 
-    if (ovulationDate) {
-      isOvulation = ovulationDate.toDateString() === thisDate.toDateString();
-    }
-
-    const isFertile = fertileDates.includes(dateString);
-
-    days.push({
-      day,
-      dateString,
-      isSelected,
-      isPredicted,
-      isOvulation,
-      isPredictedRange,
-      isFertile,
-    });
-  }
-
-  return days;
-};
+    return days;
+  };
 
 
   const toggleDate = async (dateString: string) => {
-  if (!uid) return;
+    if (!uid) return;
 
-  const docRef = doc(db, 'users', uid, 'periods', dateString);
+    const docRef = doc(db, 'users', uid, 'periods', dateString);
 
-  if (selectedDates.includes(dateString)) {
-    // Date is being deselected → remove from Firestore
-    setSelectedDates(prev => prev.filter(d => d !== dateString));
-    await deleteDoc(docRef);
-  } else {
-    // Date is being selected → add to Firestore
-    setSelectedDates(prev => [...prev, dateString]);
-    await setDoc(docRef, {
-      date: dateString,
-      timestamp: Timestamp.fromDate(new Date(dateString)),
-    });
-  }
-};
+    if (selectedDates.includes(dateString)) {
+      setSelectedDates(prev => prev.filter(d => d !== dateString));
+      await deleteDoc(docRef);
+    } else {
+      setSelectedDates(prev => [...prev, dateString]);
+      await setDoc(docRef, {
+        date: dateString,
+        timestamp: Timestamp.fromDate(new Date(dateString)),
+      });
+    }
+  };
 
   const navigateMonth = (direction: 'prev' | 'next') => {
     setCurrentMonth(prev => {
@@ -195,14 +226,13 @@ const periodLength = 5;
                       {dayData ? (
                         <button
                           onClick={() => toggleDate(dayData.dateString)}
-                          className={`w-full h-full rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 ${
-                            dayData.isSelected
+                          className={`w-full h-full rounded-lg text-sm font-medium transition-all duration-300 hover:scale-105 ${dayData.isSelected
                               ? 'bg-gradient-primary text-white shadow-soft' :
-                                dayData.isPredictedRange ? 'bg-blue-100 text-blue-700' 
-                              : dayData.isFertile
-                              ? 'bg-accent text-white'
-                              : 'hover:bg-muted border border-transparent hover:border-border'
-                          }`}
+                              dayData.isPredictedRange ? 'bg-blue-100 text-blue-700'
+                                : dayData.isFertile
+                                  ? 'bg-accent text-white'
+                                  : 'hover:bg-muted border border-transparent hover:border-border'
+                            }`}
                         >
                           {dayData.day}
                         </button>

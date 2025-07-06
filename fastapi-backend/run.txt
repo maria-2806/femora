@@ -1,4 +1,4 @@
-python -m venv venv
+python -m venv venv310 (py -3.11 -m venv venv310)
 .\venv310\Scripts\activate
 python.exe -m pip install --upgrade pip
 pip install -r requirements.txt

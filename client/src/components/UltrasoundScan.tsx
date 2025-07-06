@@ -1,16 +1,15 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
-import { Upload, FileImage, CheckCircle, AlertCircle, Brain, Sparkles } from 'lucide-react';
+import { Upload, FileImage, CheckCircle, AlertCircle, Brain, Sparkles, Heart } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { storage, db, auth } from '../firebaseConfig';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
-import { useRef } from 'react';
-
-
+import jsPDF from 'jspdf';
+// import html2canvas from 'html2canvas';
 
 const UltrasoundScan = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -22,18 +21,16 @@ const UltrasoundScan = () => {
   } | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const { toast } = useToast();
-
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const resultRef = useRef<HTMLDivElement | null>(null); // for PDF
 
   const triggerFileSelect = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.click();
-    }
+    if (fileInputRef.current) fileInputRef.current.click();
   };
-  // 🚀 Simulate analysis and save to Firebase
+
   const simulateAnalysis = async (selectedFile?: File) => {
     if (!selectedFile || !auth.currentUser) {
-      toast({ title: "Upload failed", description: "Please select a valid Ultrasound scan." });
+      toast({ title: 'Upload failed', description: 'Please select a valid Ultrasound scan.' });
       return;
     }
 
@@ -45,11 +42,9 @@ const UltrasoundScan = () => {
     const fileRef = ref(storage, `scans/${uid}/${fileId}-${selectedFile.name}`);
 
     try {
-      // Upload to Firebase Storage
       await uploadBytes(fileRef, selectedFile);
       const fileURL = await getDownloadURL(fileRef);
 
-      // Progress bar simulation
       const uploadInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 100) {
@@ -60,69 +55,110 @@ const UltrasoundScan = () => {
         });
       }, 150);
 
-      // 🔥 Real API Call to FastAPI server
       const formData = new FormData();
-      formData.append("file", selectedFile);
+      formData.append('file', selectedFile);
 
-      const res = await fetch("http://localhost:8000/scan", {
-        method: "POST",
+      const res = await fetch('http://localhost:8000/scan', {
+        method: 'POST',
         body: formData,
       });
 
       const result = await res.json();
-      console.log("API Response:", result);
-  console.log("PCOS %:", result.probability_pcos);
-  console.log("Normal %:", result.probability_normal);
       if (result.error) throw new Error(result.error);
 
       const finalResult = {
-  probability: Math.floor(result.probability_pcos * 100),
-  confidence: Math.floor(Math.max(result.probability_pcos, result.probability_normal) * 100),
-  findings:
-    result.prediction === 1
-      ? [
-          "Multiple small follicles detected in ovaries",
-          "Ovarian volume appears enlarged",
-          "Hormonal pattern suggests PCOS indicators",
-          "Recommend follow-up with healthcare provider",
-        ]
-      : [
-          "Ovaries appear normal in volume and structure",
-          "No signs of excessive follicles or cysts",
-          "Hormonal indicators within normal range",
-          "Low likelihood of PCOS at this time",
-        ],
-};
-console.log("Final Result:", finalResult);
-
-
+        probability: Math.floor(result.probability_pcos * 100),
+        confidence: Math.floor(Math.max(result.probability_pcos, result.probability_normal) * 100),
+        findings:
+          result.prediction === 1
+            ? [
+                'Multiple small follicles detected in ovaries',
+                'Ovarian volume appears enlarged',
+                'Hormonal pattern suggests PCOS indicators',
+                'Recommend follow-up with healthcare provider',
+              ]
+            : [
+                'Ovaries appear normal in volume and structure',
+                'No signs of excessive follicles or cysts',
+                'Hormonal indicators within normal range',
+                'Low likelihood of PCOS at this time',
+              ],
+      };
 
       setAnalysisResult(finalResult);
       setIsAnalyzing(false);
 
-      // Save to Firestore
       await addDoc(collection(db, 'users', uid, 'diagnosis'), {
         fileURL,
         ...finalResult,
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
       });
 
       toast({
-        title: "Analysis Complete!",
-        description: "Your Ultrasound scan has been successfully analyzed and saved.",
+        title: 'Analysis Complete!',
+        description: 'Your Ultrasound scan has been successfully analyzed and saved.',
       });
     } catch (err: any) {
       setIsAnalyzing(false);
       toast({
-        title: "Scan Error",
+        title: 'Scan Error',
         description: err.message,
-        variant: "destructive",
+        variant: 'destructive',
       });
     }
   };
 
 
-  // 🧲 Drag & Drop Support
+const generatePDF = (result: {
+  probability: number;
+  confidence: number;
+  findings: string[];
+}) => {
+  const pdf = new jsPDF();
+  const margin = 15;
+  let y = margin;
+
+  // Femora Title
+  pdf.setFontSize(20);
+  pdf.setTextColor(255, 20, 147); // Femora pink
+  pdf.text('Femora Report', margin, y);
+  y += 12;
+
+  // Patient Info
+  const now = new Date();
+  const user = auth.currentUser?.displayName || 'Anonymous User';
+
+  pdf.setFontSize(12);
+  pdf.setTextColor(0, 0, 0);
+  pdf.text(`Patient Name: ${user}`, margin, y);
+  y += 8;
+  pdf.text(`Generated on: ${now.toLocaleString()}`, margin, y);
+  y += 12;
+
+  // Analysis Summary
+  pdf.setFontSize(14);
+  pdf.setTextColor(33, 33, 33);
+  pdf.text(`PCOS Probability: ${result.probability}%`, margin, y);
+  y += 8;
+  pdf.text(`Confidence: ${result.confidence}%`, margin, y);
+  y += 12;
+
+  // Findings
+  pdf.setFontSize(13);
+  pdf.text('Key Findings:', margin, y);
+  y += 8;
+
+  result.findings.forEach((finding) => {
+    pdf.setFontSize(12);
+    pdf.text(`• ${finding}`, margin + 5, y);
+    y += 7;
+  });
+
+  pdf.save('Femora_Report.pdf');
+};
+
+
+
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation();
   }, []);
@@ -138,19 +174,13 @@ console.log("Final Result:", finalResult);
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault(); e.stopPropagation(); setDragActive(false);
     const files = e.dataTransfer.files;
-    if (files && files[0]) {
-      simulateAnalysis(files[0]);
-    }
+    if (files && files[0]) simulateAnalysis(files[0]);
   }, []);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      console.log("✅ File selected:", file);
-      simulateAnalysis(file);
-    }
+    if (file) simulateAnalysis(file);
   };
-
 
   return (
     <section id="scan" className="py-20 bg-gradient-soft">
@@ -165,7 +195,6 @@ console.log("Final Result:", finalResult);
           </p>
         </div>
 
-        {/* Upload + Result Grid */}
         <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Upload Box */}
           <Card className="shadow-elegant border-border/50 animate-slide-in-right">
@@ -174,16 +203,15 @@ console.log("Final Result:", finalResult);
                 <Brain className="w-5 h-5 text-primary" />
                 <span>Upload Ultrasound Scan</span>
               </CardTitle>
-              <CardDescription>
-                Supports DICOM, JPG, PNG formats. Max size: 50MB
-              </CardDescription>
+              <CardDescription>Supports JPG, PNG formats. Max size: 50MB</CardDescription>
             </CardHeader>
             <CardContent>
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${dragActive
-                  ? 'border-primary bg-primary/5 scale-105'
-                  : 'border-border hover:border-primary/50 hover:bg-muted/30'
-                  }`}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
+                  dragActive
+                    ? 'border-primary bg-primary/5 scale-105'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                }`}
                 onDragEnter={handleDragIn}
                 onDragLeave={handleDragOut}
                 onDragOver={handleDrag}
@@ -207,13 +235,10 @@ console.log("Final Result:", finalResult);
                       <FileImage className="w-4 h-4 mr-2" />
                       Select File
                     </Button>
-
                   </div>
                 </div>
-
               </div>
 
-              {/* Analysis Progress */}
               {isAnalyzing && (
                 <div className="mt-6 space-y-4 animate-fade-in-up">
                   <div className="flex items-center justify-between">
@@ -237,9 +262,7 @@ console.log("Final Result:", finalResult);
                 <CheckCircle className="w-5 h-5 text-success" />
                 <span>Analysis Results</span>
               </CardTitle>
-              <CardDescription>
-                AI-generated insights from your Ultrasound scan
-              </CardDescription>
+              <CardDescription>AI-generated insights from your Ultrasound scan</CardDescription>
             </CardHeader>
             <CardContent>
               {!analysisResult ? (
@@ -248,7 +271,22 @@ console.log("Final Result:", finalResult);
                   <p>Upload an Ultrasound scan to see your analysis results</p>
                 </div>
               ) : (
-                <div className="space-y-6 animate-fade-in-up">
+                <div ref={resultRef} className="space-y-6 animate-fade-in-up bg-white p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center space-x-2">
+                      <div className="p-2 bg-gradient-primary rounded-lg shadow-soft">
+                        <Heart className="w-6 h-6 text-primary-foreground" />
+                      </div>
+                      <span className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+                        Femora
+                      </span>
+                    </div>
+                    <div className="text-right text-sm text-muted-foreground">
+                      <p>Patient: {auth.currentUser?.displayName || 'Anonymous User'}</p>
+                      <p>Generated on: {new Date().toLocaleString()}</p>
+                    </div>
+                  </div>
+
                   <div className="text-center p-6 bg-gradient-secondary rounded-lg">
                     <h3 className="text-lg font-semibold mb-2">PCOS Probability</h3>
                     <div className="text-4xl font-bold text-primary mb-2">{analysisResult.probability}%</div>
@@ -273,7 +311,7 @@ console.log("Final Result:", finalResult);
                   </div>
 
                   <div className="flex space-x-3">
-                    <Button variant="feminine" size="sm" className="flex-1">
+                    <Button variant="feminine" size="sm" className="flex-1" onClick={() => analysisResult && generatePDF(analysisResult)}>
                       Download Report
                     </Button>
                     <Button variant="outline" size="sm" className="flex-1">

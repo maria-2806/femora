@@ -72,13 +72,11 @@ const Hero = () => {
 
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center animate-fade-in-up" style={{ animationDelay: '0.6s' }}>
-            <Link to="/signup" className="w-full sm:w-auto">
             <Button variant="feminine" size="xl" className="group">
 
               Get Started Today
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform duration-300" />
             </Button>
-            </Link>
             <Button variant="outline" size="xl">
               Learn More
             </Button>

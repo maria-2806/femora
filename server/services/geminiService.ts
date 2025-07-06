@@ -1,5 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
-import { adminAuth } from '../firebaseAdmin'; // make sure adminAuth is exported
+import { adminAuth } from '../firebaseAdmin';
 import dotenv from 'dotenv';
 import { db } from '../firebaseAdmin';
 
@@ -22,7 +22,6 @@ function groupPeriodDatesByCycle(dates: Date[]): Date[][] {
     const lastCycle = cycles[cycles.length - 1];
 
     if (!lastCycle || (current.getTime() - lastCycle[lastCycle.length - 1].getTime()) > 24 * 60 * 60 * 1000) {
-      // New cycle if gap > 1 day
       cycles.push([current]);
     } else {
       lastCycle.push(current);
@@ -43,10 +42,10 @@ async function getUserContext(uid: string): Promise<string> {
 
     const [diagnosisSnap, periodsSnap, userRecord] = await Promise.all([
       db.collection('users').doc(uid).collection('diagnosis')
-        .orderBy('timestamp', 'desc').limit(1).get(),
+        .orderBy('createdAt', 'desc').limit(1).get(),
       db.collection('users').doc(uid).collection('periods')
         .where('date', '>=', sixMonthsAgo).orderBy('date', 'desc').get(),
-      adminAuth.getUser(uid), // 🔥 get name/email from Firebase Auth
+      adminAuth.getUser(uid),
     ]);
 
     const diagnosis = diagnosisSnap.docs[0]?.data();
@@ -90,7 +89,6 @@ ${formattedCycles.length > 0 ? formattedCycles.join('\n') : 'No period data avai
  */
 async function getGeminiResponse(prompt: string, uid: string): Promise<string> {
   try {
-    console.log('🎯 Inside Gemini service. UID:', uid, 'Prompt:', prompt);
 
     const context = await getUserContext(uid);
 

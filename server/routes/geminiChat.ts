@@ -9,7 +9,6 @@ const router = express.Router();
 router.post('/', verifyFirebaseToken, async (req: AuthenticatedRequest, res) => {
   const { prompt } = req.body;
   const uid = req.uid;
-  console.log('📩 Chat POST received. Prompt:', prompt, 'UID:', uid);
 
 if (!prompt || typeof prompt !== 'string') {
   return res.status(400).json({ error: 'Prompt is required and must be a string.' });
@@ -20,8 +19,7 @@ if (!uid) {
 }
 
 try {
-  const aiResponse = await getGeminiResponse(prompt, uid); // ✅ safe now!
-  console.log('✅ Chat route hit');
+  const aiResponse = await getGeminiResponse(prompt, uid);
   return res.status(200).json({ response: aiResponse });
   
 } catch (error) {
