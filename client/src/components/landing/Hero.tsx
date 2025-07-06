@@ -50,7 +50,7 @@ const Hero = () => {
 
           {/* Subtitle */}
           <p className="text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-fade-in-up" style={{ animationDelay: '0.2s' }}>
-            Advanced PCOS detection through AI-powered MRI analysis, 
+            Advanced PCOS detection through AI-powered Ultrasound analysis, 
             personalized period tracking, and intelligent health insights.
           </p>
 

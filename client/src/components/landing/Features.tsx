@@ -9,7 +9,7 @@ const Features = () => {
                 <Brain className="w-8 h-8 text-primary mx-auto mb-3" />
                 <h3 className="font-semibold mb-2">Smart Analysis</h3>
                 <p className="text-sm text-muted-foreground">
-                  AI analyzes your MRI results and health patterns
+                  AI analyzes your Ultrasound results and health patterns
                 </p>
               </CardContent>
             </Card>

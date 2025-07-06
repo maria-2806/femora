@@ -7,15 +7,16 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { auth } from '@/firebaseConfig'
 import { Input } from '@/components/ui/input';
 import { Send, Bot, User } from 'lucide-react';
-
 interface Message {
   id: string;
   type: 'user' | 'bot';
   content: string;
   timestamp: Date;
 }
+import ReactMarkdown from 'react-markdown';
 
 const Chat = () => {
   const [messages, setMessages] = useState<Message[]>([
@@ -36,49 +37,50 @@ const Chat = () => {
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!inputValue.trim()) return;
+  if (!inputValue.trim()) return;
 
-    const userMessage: Message = {
-      id: Date.now().toString(),
-      type: 'user',
-      content: inputValue,
+  const currentUser = auth.currentUser;
+  const idToken = currentUser && (await currentUser.getIdToken());
+
+  const userMessage: Message = {
+    id: Date.now().toString(),
+    type: 'user',
+    content: inputValue,
+    timestamp: new Date(),
+  };
+
+  setMessages((prev) => [...prev, userMessage]);
+  setInputValue('');
+  setIsTyping(true);
+
+  try {
+    console.log('🛫 Sending message to backend...', inputValue);
+console.log('🧾 ID Token:', idToken);
+    const response = await fetch('http://localhost:5000/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`, 
+      },
+      body: JSON.stringify({ prompt: inputValue }),
+    });
+
+    const data = await response.json();
+
+    const botMessage: Message = {
+      id: (Date.now() + 1).toString(),
+      type: 'bot',
+      content: data.response || 'Sorry, I couldn’t understand that.',
       timestamp: new Date(),
     };
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue('');
-    setIsTyping(true);
-
-    try {
-      const response = await fetch('http://localhost:5000/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: inputValue }),
-      });
-
-      const data = await response.json();
-
-      const botMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        type: 'bot',
-        content: data.response || 'Sorry, I couldn’t understand that.',
-        timestamp: new Date(),
-      };
-
-      setMessages((prev) => [...prev, botMessage]);
-    } catch (error) {
-      console.error('Error fetching from Gemini API:', error);
-      const fallbackMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        type: 'bot',
-        content: 'Oops! Something went wrong. Please try again.',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, fallbackMessage]);
-    } finally {
-      setIsTyping(false);
-    }
-  };
+    setMessages((prev) => [...prev, botMessage]);
+  } catch (error) {
+    console.error('Error fetching from Gemini API:', error);
+  } finally {
+    setIsTyping(false);
+  }
+};
 
   const quickQuestions = [
     'Analyze my recent PCOS results',
@@ -125,9 +127,8 @@ const Chat = () => {
                   className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}
                 >
                   <div
-                    className={`flex items-start space-x-3 max-w-[80%] ${
-                      message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
-                    }`}
+                    className={`flex items-start space-x-3 max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                      }`}
                   >
                     <div className={`p-2 rounded-full ${message.type === 'user' ? 'bg-primary' : 'bg-secondary'}`}>
                       {message.type === 'user' ? (
@@ -137,13 +138,12 @@ const Chat = () => {
                       )}
                     </div>
                     <div
-                      className={`p-4 rounded-2xl ${
-                        message.type === 'user'
+                      className={`p-4 rounded-2xl ${message.type === 'user'
                           ? 'bg-primary text-primary-foreground'
                           : 'bg-muted border border-border/50'
-                      }`}
+                        }`}
                     >
-                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      <p className="text-sm leading-relaxed"><ReactMarkdown>{message.content}</ReactMarkdown></p>
                       <span className="text-xs opacity-70 mt-2 block">
                         {message.timestamp.toLocaleTimeString([], {
                           hour: '2-digit',

@@ -1,6 +1,6 @@
 import Navigation from '@/components/Navigation';
 import Hero from '@/components/landing/Hero';
-import MRIUpload from '@/components/landing/MRIUpload';
+import UltrasoundUpload from '@/components/landing/UltrasoundUpload';
 import PeriodTracker from '@/components/landing/PeriodTracker';
 import AIChat from '@/components/landing/AIChat';
 import Features from '@/components/landing/Features';
@@ -10,7 +10,7 @@ const Index = () => {
       {/* <Navigation /> */}
       <Hero />
        <Features />
-      <MRIUpload />
+      <UltrasoundUpload />
       <PeriodTracker />
       <AIChat />
     </div>

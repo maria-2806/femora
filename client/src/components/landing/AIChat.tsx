@@ -52,7 +52,7 @@ const AIChat = () => {
 
   const generateAIResponse = (input: string): string => {
     const responses = [
-      "Based on your recent MRI analysis showing a 75% PCOS probability, I recommend discussing hormone therapy options with your healthcare provider. Your cycle data also shows some irregularities that support this assessment.",
+      "Based on your recent Ultrasound analysis showing a 75% PCOS probability, I recommend discussing hormone therapy options with your healthcare provider. Your cycle data also shows some irregularities that support this assessment.",
       "Your period tracking shows a 32-day average cycle, which is slightly longer than typical. Combined with your PCOS indicators, this suggests monitoring your ovulation patterns more closely.",
       "I notice you haven't logged any symptoms lately. Tracking mood, energy levels, and physical symptoms can help identify patterns related to your PCOS and menstrual cycle.",
       "Your health data indicates consistent patterns that are valuable for your healthcare provider. Would you like me to generate a comprehensive report for your next appointment?",

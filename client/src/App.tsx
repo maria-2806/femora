@@ -9,7 +9,7 @@ import Chat from "./components/Chat";
 import Home from "./components/Home";
 const queryClient = new QueryClient();
 import Layout from "./components/layout";
-import MRIScan from "./components/MRIScan";
+import UltrasoundScan from "./components/UltrasoundScan";
 import Tracker from "./components/Tracker";
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -24,7 +24,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
           <Route path="/home" element={<Home />} />
-          <Route path="/scan" element={<MRIScan />} />
+          <Route path="/scan" element={<UltrasoundScan />} />
           <Route path="/tracker" element={<Tracker />} />
           <Route path="/chat" element={<Chat />} />
 

@@ -1,57 +1,62 @@
-from fastapi import FastAPI, File, UploadFile
-from fastapi.middleware.cors import CORSMiddleware
-import numpy as np
-import tensorflow as tf
+from fastapi import FastAPI, UploadFile, File
+from model.model import HierarchicalGCN
+from model.utils import image_to_graph
+import torch
+import io
 import cv2
-from io import BytesIO
-from PIL import Image
+import numpy as np
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
 
-# Enable CORS for MERN + Firebase frontend to access this API
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, replace with your frontend domain
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Load the trained model
-model = tf.keras.models.load_model("pcos_detection_model.h5")
-
-# Constants
-IMG_SIZE = 224
-CLASSES = ["normal", "pcos"]
-
-def apply_sobel(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-    sobelx = cv2.Sobel(gray, cv2.CV_64F, 1, 0, ksize=3)
-    sobely = cv2.Sobel(gray, cv2.CV_64F, 0, 1, ksize=3)
-    magnitude = np.sqrt(sobelx**2 + sobely**2)
-    norm = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)
-    return norm.astype(np.uint8)
-
-def preprocess_image(file: UploadFile):
-    contents = file.file.read()
-    image = Image.open(BytesIO(contents)).convert("RGB")
-    image = image.resize((IMG_SIZE, IMG_SIZE))
-    image_np = np.array(image)
-    sobel = apply_sobel(image_np)
-    image_4ch = np.dstack((image_np, sobel))
-    image_4ch = image_4ch.astype("float32") / 255.0
-    return np.expand_dims(image_4ch, axis=0)
+# Load model
+model = HierarchicalGCN(nfeat=64, nhid=64, nclass=2, dropout=0.5)
+model.load_state_dict(torch.load("model/hierarchical_gcn_model.pth", map_location="cpu"))
+model.eval()
 
 @app.post("/scan")
 async def predict(file: UploadFile = File(...)):
-    try:
-        image = preprocess_image(file)
-        prediction = model.predict(image)[0]
-        predicted_class = int(np.argmax(prediction))
-        confidence = float(np.max(prediction))
-        return {
-            "class": CLASSES[predicted_class],
-            "confidence": round(confidence * 100, 2)
-        }
-    except Exception as e:
-        return {"error": str(e)}
+    # Read file as image
+    contents = await file.read()
+    nparr = np.frombuffer(contents, np.uint8)
+    img = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+
+    # Save temp file
+    cv2.imwrite("temp.jpg", img)  # Only because image_to_graph expects path
+
+    # Convert image to graph
+    node_features, edge_index, adj_matrix = image_to_graph("temp.jpg")
+
+    # Convert edge_index to adjacency matrix
+    adj = torch.zeros((node_features.size(0), node_features.size(0)))
+    for j in range(edge_index.size(1)):
+        adj[edge_index[0, j], edge_index[1, j]] = 1
+    adj = adj + torch.eye(adj.size(0))  # Add self-loops
+
+    # Normalize
+    rowsum = adj.sum(1)
+    d_inv_sqrt = torch.pow(rowsum, -0.5)
+    d_inv_sqrt[torch.isinf(d_inv_sqrt)] = 0.
+    d_mat_inv_sqrt = torch.diag(d_inv_sqrt)
+    adj = torch.mm(torch.mm(d_mat_inv_sqrt, adj), d_mat_inv_sqrt)
+
+    # Run prediction
+    with torch.no_grad():
+        output = model(node_features, adj)
+        probs = torch.exp(output).numpy().flatten()
+        pred = int(probs.argmax())
+
+    return {
+        "prediction": pred,
+        "probability_pcos": round(float(probs[1]), 4),
+        "probability_normal": round(float(probs[0]), 4)
+    }
