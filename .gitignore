@@ -12,6 +12,9 @@ node_modules
 dist
 dist-ssr
 *.local
+# Ignore Python virtual environments
+venv*/
+**/venv*/
 
 # Editor directories and files
 .vscode/*

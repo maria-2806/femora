@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Calendar, Heart, TrendingUp, Moon, Droplets } from 'lucide-react';
 import { auth, db } from '@/firebaseConfig';
 import { collection, doc, getDocs, setDoc, query, where, Timestamp } from 'firebase/firestore';
-import { deleteDoc } from 'firebase/firestore'; // make sure this import is at the top
+import { deleteDoc } from 'firebase/firestore'; 
 
 
 
@@ -70,44 +70,59 @@ const periodLength = 5;
 
 
   const generateCalendarDays = () => {
-    const year = currentMonth.getFullYear();
-    const month = currentMonth.getMonth();
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const startDay = firstDay.getDay();
-    const daysInMonth = lastDay.getDate();
+  const year = currentMonth.getFullYear();
+  const month = currentMonth.getMonth();
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDay = firstDay.getDay();
+  const daysInMonth = lastDay.getDate();
 
-    const days = [];
-    for (let i = 0; i < startDay; i++) days.push(null);
+  const days = [];
+  for (let i = 0; i < startDay; i++) days.push(null);
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const isSelected = selectedDates.includes(dateString);
-let isPredicted = false;
-let isOvulation = false;
-let isPredictedRange = false;
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const isSelected = selectedDates.includes(dateString);
 
-if (predictedDate) {
-  const predictedRange = Array.from({ length: periodLength }, (_, i) => {
-    const d = new Date(predictedDate);
-    d.setDate(predictedDate.getDate() + i);
-    return d.toDateString();
-  });
+    let isPredicted = false;
+    let isOvulation = false;
+    let isPredictedRange = false;
 
-  isPredictedRange = predictedRange.includes(new Date(dateString).toDateString());
-  isPredicted = predictedDate.toDateString() === new Date(dateString).toDateString();
-}
+    const thisDate = new Date(dateString);
+    const predictedMonthMatches = predictedDate && predictedDate.getMonth() === currentMonth.getMonth() &&
+                                  predictedDate.getFullYear() === currentMonth.getFullYear();
 
-if (ovulationDate) {
-  isOvulation = ovulationDate.toDateString() === new Date(dateString).toDateString();
-}
+    if (predictedDate && predictedMonthMatches) {
+      const predictedRange = Array.from({ length: periodLength }, (_, i) => {
+        const d = new Date(predictedDate);
+        d.setDate(d.getDate() + i);
+        return d.toDateString();
+      });
 
-      const isFertile = fertileDates.includes(dateString);
-days.push({ day, dateString, isSelected, isPredicted, isOvulation, isPredictedRange });
+      isPredictedRange = predictedRange.includes(thisDate.toDateString());
+      isPredicted = predictedDate.toDateString() === thisDate.toDateString();
     }
 
-    return days;
-  };
+    if (ovulationDate) {
+      isOvulation = ovulationDate.toDateString() === thisDate.toDateString();
+    }
+
+    const isFertile = fertileDates.includes(dateString);
+
+    days.push({
+      day,
+      dateString,
+      isSelected,
+      isPredicted,
+      isOvulation,
+      isPredictedRange,
+      isFertile,
+    });
+  }
+
+  return days;
+};
+
 
   const toggleDate = async (dateString: string) => {
   if (!uid) return;
