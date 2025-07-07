@@ -72,17 +72,17 @@ const UltrasoundScan = () => {
         findings:
           result.prediction === 1
             ? [
-                'Multiple small follicles detected in ovaries',
-                'Ovarian volume appears enlarged',
-                'Hormonal pattern suggests PCOS indicators',
-                'Recommend follow-up with healthcare provider',
-              ]
+              'Multiple small follicles detected in ovaries',
+              'Ovarian volume appears enlarged',
+              'Hormonal pattern suggests PCOS indicators',
+              'Recommend follow-up with healthcare provider',
+            ]
             : [
-                'Ovaries appear normal in volume and structure',
-                'No signs of excessive follicles or cysts',
-                'Hormonal indicators within normal range',
-                'Low likelihood of PCOS at this time',
-              ],
+              'Ovaries appear normal in volume and structure',
+              'No signs of excessive follicles or cysts',
+              'Hormonal indicators within normal range',
+              'Low likelihood of PCOS at this time',
+            ],
       };
 
       setAnalysisResult(finalResult);
@@ -109,53 +109,53 @@ const UltrasoundScan = () => {
   };
 
 
-const generatePDF = (result: {
-  probability: number;
-  confidence: number;
-  findings: string[];
-}) => {
-  const pdf = new jsPDF();
-  const margin = 15;
-  let y = margin;
+  const generatePDF = (result: {
+    probability: number;
+    confidence: number;
+    findings: string[];
+  }) => {
+    const pdf = new jsPDF();
+    const margin = 15;
+    let y = margin;
 
-  // Femora Title
-  pdf.setFontSize(20);
-  pdf.setTextColor(255, 20, 147); // Femora pink
-  pdf.text('Femora Report', margin, y);
-  y += 12;
+    // Femora Title
+    pdf.setFontSize(20);
+    pdf.setTextColor(255, 20, 147); // Femora pink
+    pdf.text('Femora Report', margin, y);
+    y += 12;
 
-  // Patient Info
-  const now = new Date();
-  const user = auth.currentUser?.displayName || 'Anonymous User';
+    // Patient Info
+    const now = new Date();
+    const user = auth.currentUser?.displayName || 'Anonymous User';
 
-  pdf.setFontSize(12);
-  pdf.setTextColor(0, 0, 0);
-  pdf.text(`Patient Name: ${user}`, margin, y);
-  y += 8;
-  pdf.text(`Generated on: ${now.toLocaleString()}`, margin, y);
-  y += 12;
-
-  // Analysis Summary
-  pdf.setFontSize(14);
-  pdf.setTextColor(33, 33, 33);
-  pdf.text(`PCOS Probability: ${result.probability}%`, margin, y);
-  y += 8;
-  pdf.text(`Confidence: ${result.confidence}%`, margin, y);
-  y += 12;
-
-  // Findings
-  pdf.setFontSize(13);
-  pdf.text('Key Findings:', margin, y);
-  y += 8;
-
-  result.findings.forEach((finding) => {
     pdf.setFontSize(12);
-    pdf.text(`• ${finding}`, margin + 5, y);
-    y += 7;
-  });
+    pdf.setTextColor(0, 0, 0);
+    pdf.text(`Patient Name: ${user}`, margin, y);
+    y += 8;
+    pdf.text(`Generated on: ${now.toLocaleString()}`, margin, y);
+    y += 12;
 
-  pdf.save('Femora_Report.pdf');
-};
+    // Analysis Summary
+    pdf.setFontSize(14);
+    pdf.setTextColor(33, 33, 33);
+    pdf.text(`PCOS Probability: ${result.probability}%`, margin, y);
+    y += 8;
+    pdf.text(`Confidence: ${result.confidence}%`, margin, y);
+    y += 12;
+
+    // Findings
+    pdf.setFontSize(13);
+    pdf.text('Key Findings:', margin, y);
+    y += 8;
+
+    result.findings.forEach((finding) => {
+      pdf.setFontSize(12);
+      pdf.text(`• ${finding}`, margin + 5, y);
+      y += 7;
+    });
+
+    pdf.save('Femora_Report.pdf');
+  };
 
 
 
@@ -207,11 +207,10 @@ const generatePDF = (result: {
             </CardHeader>
             <CardContent>
               <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${
-                  dragActive
-                    ? 'border-primary bg-primary/5 scale-105'
-                    : 'border-border hover:border-primary/50 hover:bg-muted/30'
-                }`}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-all duration-300 ${dragActive
+                  ? 'border-primary bg-primary/5 scale-105'
+                  : 'border-border hover:border-primary/50 hover:bg-muted/30'
+                  }`}
                 onDragEnter={handleDragIn}
                 onDragLeave={handleDragOut}
                 onDragOver={handleDrag}
@@ -314,9 +313,61 @@ const generatePDF = (result: {
                     <Button variant="feminine" size="sm" className="flex-1" onClick={() => analysisResult && generatePDF(analysisResult)}>
                       Download Report
                     </Button>
-                    <Button variant="outline" size="sm" className="flex-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1"
+                      onClick={async () => {
+                        if (!analysisResult) return;
+
+                        const to = prompt("Enter your doctor's email address:");
+                        if (!to || !to.includes("@")) {
+                          toast({ title: "Invalid Email", description: "Please enter a valid email address", variant: "destructive" });
+                          return;
+                        }
+
+                        const subject = "Femora - PCOS Ultrasound Analysis Report";
+
+                        const userName = auth.currentUser?.displayName || "Anonymous User";
+                        const text = `
+Femora PCOS Health Report
+
+Patient Name: ${userName}
+Generated On: ${new Date().toLocaleString()}
+
+PCOS Probability: ${analysisResult.probability}%
+Confidence: ${analysisResult.confidence}%
+
+Key Findings:
+${analysisResult.findings.map((f, i) => `• ${f}`).join('\n')}
+`.trim();
+
+                        try {
+                          const res = await fetch("http://localhost:5000/api/send", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ to, subject, text }), // ✅ send 'text', not 'html'
+                          });
+
+                          const result = await res.json();
+                          if (!res.ok) throw new Error(result.error || "Failed to send email");
+
+                          toast({
+                            title: "Report Sent!",
+                            description: `The report has been emailed to ${to}.`,
+                          });
+                        } catch (err: any) {
+                          toast({
+                            title: "Email Error",
+                            description: err.message || "Something went wrong",
+                            variant: "destructive",
+                          });
+                        }
+                      }}
+                    >
                       Share with Doctor
                     </Button>
+
                   </div>
                 </div>
               )}
