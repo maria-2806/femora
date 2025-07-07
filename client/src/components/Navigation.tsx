@@ -46,7 +46,6 @@ const Navigation = () => {
     { icon: Brain, label: 'Scan Analysis', to: 'scan' },
     { icon: Calendar, label: 'Period Tracker', to: 'tracker' },
     { icon: MessageCircle, label: 'AI Chat', to: 'chat' },
-    { icon: User, label: 'Profile', to: 'profile' },
   ];
 
   const handleNavClick = (path: string) => {
