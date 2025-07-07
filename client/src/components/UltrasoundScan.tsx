@@ -9,7 +9,6 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 import jsPDF from 'jspdf';
-// import html2canvas from 'html2canvas';
 
 const UltrasoundScan = () => {
   const [uploadProgress, setUploadProgress] = useState(0);
@@ -313,60 +312,7 @@ const UltrasoundScan = () => {
                     <Button variant="feminine" size="sm" className="flex-1" onClick={() => analysisResult && generatePDF(analysisResult)}>
                       Download Report
                     </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="flex-1"
-                      onClick={async () => {
-                        if (!analysisResult) return;
-
-                        const to = prompt("Enter your doctor's email address:");
-                        if (!to || !to.includes("@")) {
-                          toast({ title: "Invalid Email", description: "Please enter a valid email address", variant: "destructive" });
-                          return;
-                        }
-
-                        const subject = "Femora - PCOS Ultrasound Analysis Report";
-
-                        const userName = auth.currentUser?.displayName || "Anonymous User";
-                        const text = `
-Femora PCOS Health Report
-
-Patient Name: ${userName}
-Generated On: ${new Date().toLocaleString()}
-
-PCOS Probability: ${analysisResult.probability}%
-Confidence: ${analysisResult.confidence}%
-
-Key Findings:
-${analysisResult.findings.map((f, i) => `• ${f}`).join('\n')}
-`.trim();
-
-                        try {
-                          const res = await fetch("http://localhost:5000/api/send", {
-                            method: "POST",
-                            headers: { "Content-Type": "application/json" },
-                            body: JSON.stringify({ to, subject, text }), // ✅ send 'text', not 'html'
-                          });
-
-                          const result = await res.json();
-                          if (!res.ok) throw new Error(result.error || "Failed to send email");
-
-                          toast({
-                            title: "Report Sent!",
-                            description: `The report has been emailed to ${to}.`,
-                          });
-                        } catch (err: any) {
-                          toast({
-                            title: "Email Error",
-                            description: err.message || "Something went wrong",
-                            variant: "destructive",
-                          });
-                        }
-                      }}
-                    >
-                      Share with Doctor
-                    </Button>
+                    
 
                   </div>
                 </div>
